@@ -63,13 +63,14 @@ function addObjects() {
     // SPIDER GROUP
     spider = new THREE.Group();
 
-    const bodyGeo = new THREE.SphereGeometry(0.15, 32, 32);
-    const bodyMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    spider.add(body);
-
     const headGeo = new THREE.SphereGeometry(0.1, 32, 32);
-    const head = new THREE.Mesh(headGeo, bodyMat);
+    const headMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = +0.05;
+    spider.add(head);
+
+    const bodyGeo = new THREE.SphereGeometry(0.15, 32, 32);
+    const body = new THREE.Mesh(bodyGeo, headMat);
     // head.position.set(0, 0, 0.2);
 
     const legMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
@@ -89,9 +90,9 @@ function addObjects() {
         leg.rotation.z = Math.PI / 3;
         spider.add(leg);
     }
-    angle+= (1 / 20) * Math.PI * 2;
-    head.position.set(Math.cos(angle) * 0.2, 0, Math.sin(angle) * 0.2);
-    spider.add(head);
+    angle+= (1/2) * Math.PI * 2 + (1/20)* Math.PI * 2;
+    body.position.set(Math.cos(angle) * 0.2, 0, Math.sin(angle) * 0.2);
+    spider.add(body);
 
 
     spider.position.y = -0.1;
