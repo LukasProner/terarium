@@ -71,7 +71,6 @@ function addObjects() {
 
     const bodyGeo = new THREE.SphereGeometry(0.15, 32, 32);
     const body = new THREE.Mesh(bodyGeo, headMat);
-    // head.position.set(0, 0, 0.2);
 
     const legMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
     let angle = 0;
@@ -87,11 +86,11 @@ function addObjects() {
         }
         leg.position.set(Math.cos(angle) * 0.3, 0, Math.sin(angle) * 0.3);
         leg.rotation.y = -angle;
-        leg.rotation.z = Math.PI / 3;
+        leg.rotation.z = Math.PI /2.5;
         spider.add(leg);
     }
     angle+= (1/2) * Math.PI * 2 + (1/20)* Math.PI * 2;
-    body.position.set(Math.cos(angle) * 0.2, 0, Math.sin(angle) * 0.2);
+    body.position.set(Math.cos(angle) * 0.2, 0.07, Math.sin(angle) * 0.2);
     spider.add(body);
 
 
