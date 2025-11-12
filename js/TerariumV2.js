@@ -77,7 +77,7 @@ function addObjects() {
     for (let i = 0; i < 8; i++) {
         let angle = (i / 10) * Math.PI * 2;
         if(i>4) angle += (2 / 10) * Math.PI * 2;
-        const side = i < 4 ? 1 : -1;
+        // const side = i < 4 ? 1 : -1;
 
         // horná noha
         const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
@@ -91,7 +91,7 @@ function addObjects() {
 
         // dolná noha
         const legGeo2 = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
-        legGeo2.translate(0, 0.15, 0); // pivot na vrchu hornej časti
+        legGeo2.translate(0, -0.15, 0); // pivot na vrchu hornej časti
         const legMesh2 = new THREE.Mesh(legGeo2, legMat);
         const legPivot2 = new THREE.Object3D();
         legPivot2.position.set(0, 0.2, 0); // naviažeme na koniec hornej časti
@@ -149,35 +149,21 @@ function update() {
         for(let i=0; i<spider.legs.length; i++){
             const leg = spider.legs[i];
 
+            // fáza: pravá a ľavá strana nôh idú opačne
+            let phase = (i % 2 === 0) ? 0 : Math.PI;
+
             // horná časť
-            const theta = -Math.PI/3 + Math.sin(t*speed + i) * amplitudeZ;
+            const theta = -Math.PI/3 + Math.sin(t*speed + i + phase) * amplitudeZ;
             leg.upper.rotation.z = theta;
 
             // dolná časť sleduje hornú
-            leg.lower.rotation.z = Math.PI/3 + Math.sin(t*speed + i) * (amplitudeZ/2);
+            leg.lower.rotation.z = Math.PI/3 + Math.sin(t*speed + i + phase) * (amplitudeZ/2);
         }
     }
 
 
     controls.update();
 
-    // // Detekcia intersekcie myšou
-    // var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
-    // projector.unprojectVector(vector, camera);
-    // var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
-    // var intersects = ray.intersectObjects(scene.children, true);
-    //
-    // if (intersects.length > 0) {
-    //     if (intersects[0].object != INTERSECTED) {
-    //         if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
-    //         INTERSECTED = intersects[0].object;
-    //         INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
-    //         INTERSECTED.material.emissive.setHex(0x0000ff);
-    //     }
-    // } else {
-    //     if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
-    //     INTERSECTED = null;
-    // }
 }
 
 function onDocumentMouseMove(event) {
