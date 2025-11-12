@@ -39,7 +39,6 @@ function init() {
     document.addEventListener('mousemove', onDocumentMouseMove, false);
     window.addEventListener('resize', onWindowResize, false);
 }
-
 function addObjects() {
     // GLASS BOX
     const glassGeo = new THREE.BoxGeometry(3.01, 1.2, 2.01);
@@ -73,38 +72,46 @@ function addObjects() {
     const body = new THREE.Mesh(bodyGeo, headMat);
 
     const legMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
-    let angle = 0;
-    for (let i = 0; i < 8; i++) {
-        const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
-        const legGeo2 = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
+    spider.legs = [];
 
-        const leg = new THREE.Mesh(legGeo, legMat);
-        const leg2 = new THREE.Mesh(legGeo2, legMat);
+    for (let i = 0; i < 8; i++) {
         let angle = (i / 10) * Math.PI * 2;
+        if(i>4) angle += (2 / 10) * Math.PI * 2;
         const side = i < 4 ? 1 : -1;
 
-        if(i>4){
-            angle+= (2 / 10) * Math.PI * 2;
-        }
-        leg.position.set(Math.cos(angle) * 0.1, 0, Math.sin(angle) * 0.1);
-        leg.rotation.y = -angle;
-        leg.rotation.z = -Math.PI /3;
-        spider.add(leg);
+        // horná noha
+        const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
+        legGeo.translate(0, 0.1, 0); // pivot na dolnom konci
+        const legMesh = new THREE.Mesh(legGeo, legMat);
+        const legPivot = new THREE.Object3D();
+        legPivot.position.set(Math.cos(angle)*0.1, 0, Math.sin(angle)*0.1);
+        legPivot.rotation.y = -angle;
+        legPivot.rotation.z = -Math.PI/3;
+        legPivot.add(legMesh);
 
-        leg2.position.set(Math.cos(angle) * 0.3, 0, Math.sin(angle) * 0.3);
-        leg2.rotation.y = -angle;
-        leg2.rotation.z = Math.PI /3;
-        spider.add(leg2);
-        // leg.add(leg2);
+        // dolná noha
+        const legGeo2 = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
+        legGeo2.translate(0, 0.15, 0); // pivot na vrchu hornej časti
+        const legMesh2 = new THREE.Mesh(legGeo2, legMat);
+        const legPivot2 = new THREE.Object3D();
+        legPivot2.position.set(0, 0.2, 0); // naviažeme na koniec hornej časti
+        legPivot.add(legPivot2);
+        legPivot2.add(legMesh2);
+
+        spider.add(legPivot);
+
+        spider.legs.push({ upper: legPivot, lower: legPivot2, upperMesh: legMesh, lowerMesh: legMesh2 });
     }
-    angle+= (1/2) * Math.PI * 2 + (1/20)* Math.PI * 2;
+
+    angle = (1/2) * Math.PI * 2 + (1/20)* Math.PI * 2;
     body.position.set(Math.cos(angle) * 0.2, 0.07, Math.sin(angle) * 0.2);
     spider.add(body);
-
 
     spider.position.y = -0.1;
     scene.add(spider);
 }
+
+
 
 function render() {
     requestAnimationFrame(render);
@@ -127,6 +134,30 @@ function update() {
     if (keyboard.pressed("S")) spider.translateZ(moveDistance);
     if (keyboard.pressed("A")) spider.translateX(-moveDistance);
     if (keyboard.pressed("D")) spider.translateX(moveDistance);
+
+    if (keyboard.pressed("E")) {
+        for(i=0; i<spider.legs.length; i++) {
+            spider.legs[i].upper.rotation.z += 0.05; // alebo rotation.x/y podľa osi
+        }
+    }
+
+    if(keyboard.pressed("W")){
+        const t = clock.elapsedTime;
+        const speed = 5;
+        const amplitudeZ = Math.PI/8;
+
+        for(let i=0; i<spider.legs.length; i++){
+            const leg = spider.legs[i];
+
+            // horná časť
+            const theta = -Math.PI/3 + Math.sin(t*speed + i) * amplitudeZ;
+            leg.upper.rotation.z = theta;
+
+            // dolná časť sleduje hornú
+            leg.lower.rotation.z = Math.PI/3 + Math.sin(t*speed + i) * (amplitudeZ/2);
+        }
+    }
+
 
     controls.update();
 
