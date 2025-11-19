@@ -20,13 +20,13 @@ function init() {
 
     // SCENE
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf5f5f5);
+    scene.background = new THREE.Color(0x202020);
 
     // LIGHTS
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(3, 5, 2);
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    // const light = new THREE.DirectionalLight(0xffffff, 1);
+    // light.position.set(3, 5, 2);
+    // scene.add(light);
+    // scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
     // CONTROLS
     controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -42,14 +42,29 @@ function init() {
 function addObjects() {
     // GLASS BOX
     const glassGeo = new THREE.BoxGeometry(3.01, 1.2, 2.01);
-    const glassMat = new THREE.MeshPhongMaterial({
-        color: 0x88ccff,
+    const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x88ccff,    // svetlomodrá farba
         transparent: true,
-        opacity: 0.3,
+        opacity: 0.25,
+        roughness: 0.5,       // hladký povrch = lesk
+        metalness: 0.5,       // sklo nie je kov
         side: THREE.DoubleSide
     });
     glassBox = new THREE.Mesh(glassGeo, glassMat);
     scene.add(glassBox);
+
+    var spotlight = new THREE.SpotLight('rgb(248,248,248)');
+    spotlight.angle = Math.PI/6;
+    spotlight.position.set(-2.5, 2, 2);
+    spotlight.intensity = 2;
+    scene.add(spotlight);
+    var spotLightHelper = new THREE.SpotLightHelper( spotlight );
+    scene.add( spotLightHelper );
+    var lightTarget = new THREE.Object3D();
+    lightTarget.position.set(0,0,0);
+    scene.add(lightTarget);
+    spotlight.target = lightTarget;
+
 
     // BASE (SAND)
     var sandTexture = new THREE.ImageUtils.loadTexture('texture/sand.jpg');
