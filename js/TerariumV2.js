@@ -86,10 +86,12 @@ function addObjects() {
 
     for (let i = 4; i < 12; i++) {
         let angle = (i / 10) * Math.PI * 2;
-        // if(i>4) angle += (2 / 10) * Math.PI * 2;
-        // const side = i < 4 ? 1 : -1;
 
-        // horná noha
+        // nový pivot pre bočné kývanie
+        const legBase = new THREE.Object3D();
+        spider.add(legBase);
+
+        // horná noha (pivot, ktorý drží smer nohy)
         const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
         legGeo.translate(0, 0.1, 0); // pivot na dolnom konci
         const legMesh = new THREE.Mesh(legGeo, legMat);
@@ -101,21 +103,29 @@ function addObjects() {
 
         // dolná noha
         const legGeo2 = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
-        legGeo2.translate(0, -0.15, 0); // pivot na vrchu hornej časti
+        legGeo2.translate(0, -0.15, 0);
         const legMesh2 = new THREE.Mesh(legGeo2, legMat);
         const legPivot2 = new THREE.Object3D();
-        legPivot2.position.set(0, 0.2, 0); // naviažeme na koniec hornej časti
+        legPivot2.position.set(0, 0.2, 0);
         legPivot.add(legPivot2);
         legPivot2.add(legMesh2);
 
-        spider.add(legPivot);
+        // pridáme hornú nohu pod nový pivot
+        legBase.add(legPivot);
 
-        spider.legs.push({ upper: legPivot, lower: legPivot2, upperMesh: legMesh, lowerMesh: legMesh2 });
+        // uložíme referencie
+        spider.legs.push({
+            base: legBase,   // nový pivot pre kývanie
+            upper: legPivot,
+            lower: legPivot2,
+            upperMesh: legMesh,
+            lowerMesh: legMesh2
+        });
     }
 
     angle = Math.PI + (1/20)* Math.PI * 2;
     // body.position.set(Math.cos(angle) * 0.2, 0.07, Math.sin(angle) * 0.2);
-    body.position.set(0, 0, 0.2);
+    body.position.set(0, 0.07, 0.2);
     spider.add(body);
 
     spider.position.y = -0.1;
@@ -169,22 +179,42 @@ function update() {
         spider.translateZ(-moveDistance);
     }
 
-    // --- Animácia nôh pri pohybe ---
+
+
     if(moveX !== 0 || moveZ !== 0){
         const t = clock.elapsedTime;
         const speed = 5;
         const amplitudeZ = Math.PI/8;
-        const amplitudeY = Math.PI / 16;  // dopredu/dozadu (menší uhol)
+        const sideAmp = Math.PI/15;
 
         for(let i=0; i<spider.legs.length; i++){
             const leg = spider.legs[i];
             let phase = (i % 2 === 0) ? 0 : Math.PI;
 
-            leg.upper.rotation.z = -Math.PI/3 + Math.sin(t*speed + i + phase) * amplitudeZ;
-            leg.lower.rotation.z = Math.PI/3 + Math.sin(t*speed + i + phase) * (amplitudeZ/2);
-            // leg.upper.rotation. = Math.sin(t * speed + i + phase) * amplitudeY;
+            // uloženie pôvodného uhla
+            if (leg.base.userData.baseAngle === undefined) {
+                leg.base.userData.baseAngle = leg.base.rotation.y;
+            }
+            const baseAngle = leg.base.userData.baseAngle;
+
+            const w = t * speed + i + phase;
+
+            // normálny kruh
+            const circleX = Math.cos(w) * sideAmp;
+            const circleZ = Math.sin(w) * amplitudeZ;
+
+            // iba zmena smeru otáčania Y pre i > 4
+            const dir = (i > 3) ? -1 : 1;
+
+            // otočený smer len pre base.rotation.y
+            leg.base.rotation.y = baseAngle + circleX * dir;
+
+            // hore/dole zostáva rovnaké
+            leg.upper.rotation.z = -Math.PI/3 + circleZ;
+            leg.lower.rotation.z = Math.PI/3 + circleZ * 0.5;
         }
     }
+
 
     controls.update();
 }
