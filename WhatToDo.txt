@@ -1,0 +1,1 @@
+Pridat nejak rozoznavanie rychlosti pocitaca na vykreslovanie ci pouzit standard alebo labmert alebo Phong.

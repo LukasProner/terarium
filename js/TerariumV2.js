@@ -22,11 +22,6 @@ function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x202020);
 
-    // LIGHTS
-    // const light = new THREE.DirectionalLight(0xffffff, 1);
-    // light.position.set(3, 5, 2);
-    // scene.add(light);
-    // scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
     // CONTROLS
     controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -89,9 +84,9 @@ function addObjects() {
     const legMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
     spider.legs = [];
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 4; i < 12; i++) {
         let angle = (i / 10) * Math.PI * 2;
-        if(i>4) angle += (2 / 10) * Math.PI * 2;
+        // if(i>4) angle += (2 / 10) * Math.PI * 2;
         // const side = i < 4 ? 1 : -1;
 
         // horná noha
@@ -118,12 +113,15 @@ function addObjects() {
         spider.legs.push({ upper: legPivot, lower: legPivot2, upperMesh: legMesh, lowerMesh: legMesh2 });
     }
 
-    angle = (1/2) * Math.PI * 2 + (1/20)* Math.PI * 2;
-    body.position.set(Math.cos(angle) * 0.2, 0.07, Math.sin(angle) * 0.2);
+    angle = Math.PI + (1/20)* Math.PI * 2;
+    // body.position.set(Math.cos(angle) * 0.2, 0.07, Math.sin(angle) * 0.2);
+    body.position.set(0, 0, 0.2);
     spider.add(body);
 
     spider.position.y = -0.1;
+    spider.rotation.y = 0;
     scene.add(spider);
+
 }
 
 
@@ -139,47 +137,59 @@ function render() {
 
     update();
 }
-
 function update() {
     var delta = clock.getDelta();
     var moveDistance = 1 * delta;
+    var rotateSpeed = 5; // rýchlosť otáčania pavúka
+    // const modelOffset = Math.PI / 2;
 
-    // Pohyb pavúka pomocou klávesnice
-    if (keyboard.pressed("W")) spider.translateZ(-moveDistance);
-    if (keyboard.pressed("S")) spider.translateZ(moveDistance);
-    if (keyboard.pressed("A")) spider.translateX(-moveDistance);
-    if (keyboard.pressed("D")) spider.translateX(moveDistance);
+    // --- Vypočítanie pohybového smeru ---
+    let moveX = 0;
+    let moveZ = 0;
 
-    if (keyboard.pressed("E")) {
-        for(i=0; i<spider.legs.length; i++) {
-            spider.legs[i].upper.rotation.z += 0.05; // alebo rotation.x/y podľa osi
-        }
+    if (keyboard.pressed("W")) moveZ -= 1;
+    if (keyboard.pressed("S")) moveZ += 1;
+    if (keyboard.pressed("A")) moveX -= 1;
+    if (keyboard.pressed("D")) moveX += 1;
+
+    if (moveX !== 0 || moveZ !== 0) {
+        // Cieľový uhol pohybu (v svetových súradniciach)
+        const targetAngle = Math.atan2(moveX, moveZ) + Math.PI ; // atan2(x, z)
+
+        // Rozdiel medzi aktuálnym a cieľovým uhlom
+        let angleDiff = targetAngle - spider.rotation.y;
+
+        // Oprav rozdiel na interval [-PI, PI]
+        angleDiff = ((angleDiff + Math.PI) % (2 * Math.PI)) - Math.PI;
+
+        // Plynulé otáčanie pavúka
+        spider.rotation.y += (angleDiff) * Math.min(1, rotateSpeed * delta);
+
+        // Pohyb dopredu podľa lokálneho smeru pavúka
+        spider.translateZ(-moveDistance);
     }
 
-    if(keyboard.pressed("W")){
+    // --- Animácia nôh pri pohybe ---
+    if(moveX !== 0 || moveZ !== 0){
         const t = clock.elapsedTime;
         const speed = 5;
         const amplitudeZ = Math.PI/8;
+        const amplitudeY = Math.PI / 16;  // dopredu/dozadu (menší uhol)
 
         for(let i=0; i<spider.legs.length; i++){
             const leg = spider.legs[i];
-
-            // fáza: pravá a ľavá strana nôh idú opačne
             let phase = (i % 2 === 0) ? 0 : Math.PI;
 
-            // horná časť
-            const theta = -Math.PI/3 + Math.sin(t*speed + i + phase) * amplitudeZ;
-            leg.upper.rotation.z = theta;
-
-            // dolná časť sleduje hornú
+            leg.upper.rotation.z = -Math.PI/3 + Math.sin(t*speed + i + phase) * amplitudeZ;
             leg.lower.rotation.z = Math.PI/3 + Math.sin(t*speed + i + phase) * (amplitudeZ/2);
+            // leg.upper.rotation. = Math.sin(t * speed + i + phase) * amplitudeY;
         }
     }
 
-
     controls.update();
-
 }
+
+
 
 function onDocumentMouseMove(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
