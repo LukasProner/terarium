@@ -51,7 +51,7 @@ function addObjects() {
     var spotlight = new THREE.SpotLight('rgb(248,248,248)');
     spotlight.angle = Math.PI/6;
     spotlight.position.set(-2.5, 2, 2);
-    spotlight.intensity = 2;
+    spotlight.intensity = 0.5;
     scene.add(spotlight);
     var spotLightHelper = new THREE.SpotLightHelper( spotlight );
     scene.add( spotLightHelper );
@@ -68,70 +68,12 @@ function addObjects() {
     base = new THREE.Mesh(baseGeo, baseMat);
     base.position.y = -0.55;
     scene.add(base);
-
-    // SPIDER GROUP
-    spider = new THREE.Group();
-
-    const headGeo = new THREE.SphereGeometry(0.1, 32, 32);
-    const headMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = +0.05;
-    spider.add(head);
-
-    const bodyGeo = new THREE.SphereGeometry(0.15, 32, 32);
-    const body = new THREE.Mesh(bodyGeo, headMat);
-
-    const legMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
-    spider.legs = [];
-
-    for (let i = 4; i < 12; i++) {
-        let angle = (i / 10) * Math.PI * 2;
-
-        // nový pivot pre bočné kývanie
-        const legBase = new THREE.Object3D();
-        spider.add(legBase);
-
-        // horná noha (pivot, ktorý drží smer nohy)
-        const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
-        legGeo.translate(0, 0.1, 0); // pivot na dolnom konci
-        const legMesh = new THREE.Mesh(legGeo, legMat);
-        const legPivot = new THREE.Object3D();
-        legPivot.position.set(Math.cos(angle)*0.1, 0, Math.sin(angle)*0.1);
-        legPivot.rotation.y = -angle;
-        legPivot.rotation.z = -Math.PI/3;
-        legPivot.add(legMesh);
-
-        // dolná noha
-        const legGeo2 = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
-        legGeo2.translate(0, -0.15, 0);
-        const legMesh2 = new THREE.Mesh(legGeo2, legMat);
-        const legPivot2 = new THREE.Object3D();
-        legPivot2.position.set(0, 0.2, 0);
-        legPivot.add(legPivot2);
-        legPivot2.add(legMesh2);
-
-        // pridáme hornú nohu pod nový pivot
-        legBase.add(legPivot);
-
-        // uložíme referencie
-        spider.legs.push({
-            base: legBase,   // nový pivot pre kývanie
-            upper: legPivot,
-            lower: legPivot2,
-            upperMesh: legMesh,
-            lowerMesh: legMesh2
-        });
-    }
-
-    angle = Math.PI + (1/20)* Math.PI * 2;
-    // body.position.set(Math.cos(angle) * 0.2, 0.07, Math.sin(angle) * 0.2);
-    body.position.set(0, 0.07, 0.2);
-    spider.add(body);
-
-    spider.position.y = -0.1;
-    spider.rotation.y = 0;
-    scene.add(spider);
-
+    addSpider()
+    addTable(0, -0.9, 0);
+    spider.scale.set(0.7, 0.7, 0.7);
+    spider.position.y = -0.35;
+    var ambientLight = new THREE.AmbientLight(0xffffff,0.8);
+    scene.add(ambientLight);
 }
 
 
@@ -183,7 +125,7 @@ function update() {
 
     if(moveX !== 0 || moveZ !== 0){
         const t = clock.elapsedTime;
-        const speed = 5;
+        const speed = 9;
         const amplitudeZ = Math.PI/8;
         const sideAmp = Math.PI/15;
 
@@ -219,7 +161,121 @@ function update() {
     controls.update();
 }
 
+function addSpider(){
+    // SPIDER GROUP
+    spider = new THREE.Group();
 
+    const headGeo = new THREE.SphereGeometry(0.1, 32, 32);
+    const headMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = +0.05;
+    spider.add(head);
+
+    const bodyGeo = new THREE.SphereGeometry(0.15, 32, 32);
+    const body = new THREE.Mesh(bodyGeo, headMat);
+
+    const legMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
+    spider.legs = [];
+
+    for (let i = 4; i < 12; i++) {
+        let angle = (i / 10) * Math.PI * 2;
+
+        // nový pivot pre bočné kývanie
+        const legBase = new THREE.Object3D();
+        spider.add(legBase);
+
+        // horná noha (pivot, ktorý drží smer nohy)
+        const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
+        legGeo.translate(0, 0.1, 0); // pivot na dolnom konci
+        const legMesh = new THREE.Mesh(legGeo, legMat);
+        const legPivot = new THREE.Object3D();
+        legPivot.position.set(Math.cos(angle)*0.07, 0, Math.sin(angle)*0.1);
+        legPivot.rotation.y = -angle;
+        legPivot.rotation.z = -Math.PI/3;
+        legPivot.add(legMesh);
+
+        // dolná noha
+        const legGeo2 = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
+        legGeo2.translate(0, -0.15, 0);
+        const legMesh2 = new THREE.Mesh(legGeo2, legMat);
+        const legPivot2 = new THREE.Object3D();
+        legPivot2.position.set(0, 0.2, 0);
+        legPivot.add(legPivot2);
+        legPivot2.add(legMesh2);
+
+        // pridáme hornú nohu pod nový pivot
+        legBase.add(legPivot);
+
+        // uložíme referencie
+        spider.legs.push({
+            base: legBase,   // nový pivot pre kývanie
+            upper: legPivot,
+            lower: legPivot2,
+            upperMesh: legMesh,
+            lowerMesh: legMesh2
+        });
+    }
+
+    angle = Math.PI + (1/20)* Math.PI * 2;
+    // body.position.set(Math.cos(angle) * 0.2, 0.07, Math.sin(angle) * 0.2);
+    body.position.set(0, 0.07, 0.2);
+    spider.add(body);
+
+    spider.position.y = -0.1;
+    spider.rotation.y = 0;
+    scene.add(spider);
+}
+// JavaScript
+// Add this function to `PG_10C25_Threejs_Vrhanie_tienov_a_hmla/js/ThreeShadows.js`
+function addTable(x, y, z) {
+    var tableGroup = new THREE.Group();
+
+    // Texture for the table top (replace path if needed)
+    var woodTexture = new THREE.TextureLoader().load('texture/wood_texture.jpg');
+    woodTexture.wrapS = woodTexture.wrapT = THREE.RepeatWrapping;
+    woodTexture.repeat.set(2, 2);
+
+    // Top
+    var topGeom = new THREE.BoxGeometry(5, 0.12, 3);
+    var topMat = new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.6, metalness: 0.1 });
+    var topMesh = new THREE.Mesh(topGeom, topMat);
+    topMesh.position.set(0, 0.25, 0); // relative to group
+    topMesh.castShadow = true;
+    topMesh.receiveShadow = true;
+    tableGroup.add(topMesh);
+
+    // Legs
+    var legGeom = new THREE.BoxGeometry(0.2, 1.9, 0.2);
+    var legMat = new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.8 });
+    var legOffsets = [
+        [2, -0.7,  1.2],
+        [-2, -0.7,  1.2],
+        [2, -0.7, -1.2],
+        [-2, -0.7, -1.2]
+    ];
+    legOffsets.forEach(function(offset) {
+        var leg = new THREE.Mesh(legGeom, legMat);
+        leg.position.set(offset[0], offset[1], offset[2]);
+        leg.castShadow = true;
+        leg.receiveShadow = true;
+        tableGroup.add(leg);
+    });
+
+    // Position the whole table group in world coordinates
+    tableGroup.position.set(x, y, z);
+
+    // Ensure the table receives shadows from lights and contributes shadows
+    tableGroup.traverse(function(child) {
+        if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    });
+
+    scene.add(tableGroup);
+}
+
+// Call this from inside addObjects(), e.g. after plane/akvarium creation:
 
 function onDocumentMouseMove(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
