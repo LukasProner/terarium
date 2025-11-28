@@ -35,6 +35,15 @@ function init() {
     window.addEventListener('resize', onWindowResize, false);
 }
 function addObjects() {
+    var geometryPlane = new THREE.PlaneGeometry( 15, 15, 4, 4 );
+    var materialPlane = new THREE.MeshBasicMaterial( {
+        color: 0x747570,
+        side: THREE.DoubleSide} );
+    plane = new THREE.Mesh( geometryPlane, materialPlane );
+    plane.position.set(0, -2.5, 0);
+    plane.rotation.x = Math.PI / 2;
+    scene.add( plane );
+
     // GLASS BOX
     const glassGeo = new THREE.BoxGeometry(3.01, 1.2, 2.01);
     const glassMat = new THREE.MeshStandardMaterial({
@@ -125,7 +134,7 @@ function update() {
 
     if(moveX !== 0 || moveZ !== 0){
         const t = clock.elapsedTime;
-        const speed = 9;
+        const speed =12;
         const amplitudeZ = Math.PI/8;
         const sideAmp = Math.PI/15;
 
@@ -152,8 +161,13 @@ function update() {
             leg.base.rotation.y = baseAngle + circleX * dir;
 
             // hore/dole zostáva rovnaké
-            leg.upper.rotation.z = -Math.PI/3 + circleZ;
-            leg.lower.rotation.z = Math.PI/3 + circleZ * 0.5;
+            if(i>1 && i<6){
+                leg.upper.rotation.z = -Math.PI/3 + circleZ;
+                leg.lower.rotation.z = Math.PI/3 + circleZ * 0.5;
+            }else{
+                leg.upper.rotation.z = -Math.PI/4 + circleZ;
+                leg.lower.rotation.z = Math.PI/3 + circleZ * 0.3;
+            }
         }
     }
 
