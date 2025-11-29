@@ -1,0 +1,42 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+/* MENU OVERLAY */
+#menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 10;
+}
+
+#menu h1 {
+    font-size: 48px;
+    margin-bottom: 30px;
+}
+
+#menu button {
+    font-size: 20px;
+    padding: 15px 40px;
+    margin: 10px;
+    cursor: pointer;
+}
+
+/* KONTEJNER NA CANVAS */
+#gameContainer {
+    width: 100vw;
+    height: 100vh;
+}

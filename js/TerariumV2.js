@@ -1,6 +1,8 @@
 var camera, scene, renderer, controls;
 var clock = new THREE.Clock();
 var keyboard = new THREEx.KeyboardState();
+var gameStarted = false;
+var firstMove = false;
 
 var glassBox, base, spider;
 var projector, mouse = { x: 0, y: 0 }, INTERSECTED;
@@ -9,6 +11,8 @@ init();
 render();
 
 function init() {
+    console.log("START");
+
     // CAMERA
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 0.5, 3);
@@ -37,6 +41,7 @@ function init() {
     //SHADOWS
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
 }
 
 
@@ -76,7 +81,7 @@ function addObjects() {
 
 function render() {
     requestAnimationFrame(render);
-
+    if (!gameStarted) return;
     // Simple idle animation (rotation)
     // spider.rotation.y += 0.005;
 
@@ -97,7 +102,10 @@ function update() {
     let moveZ = 0;
 
     if (keyboard.pressed("W")) moveZ -= 1;
-    if (keyboard.pressed("S")) moveZ += 1;
+    if (keyboard.pressed("S")||firstMove==false){
+        moveZ += 1;
+        firstMove=true;
+    }
     if (keyboard.pressed("A")) moveX -= 1;
     if (keyboard.pressed("D")) moveX += 1;
 
@@ -451,3 +459,22 @@ function loadObjWithMTL(objPath, MTLpath, scalex, scaley, scalez,
         });
     });
 }
+
+
+
+function startGame() {
+    document.getElementById("menu").style.display = "none";
+    // console.log("Starting Game");
+    gameStarted = true;
+    // init()
+}
+
+function showControls() {
+    alert("WASD - pohyb\nMouse - kamera");
+}
+
+function exitGame() {
+    window.close(); // nemusí fungovať v prehliadači
+}
+
+
