@@ -33,6 +33,10 @@ function init() {
     projector = new THREE.Projector();
     document.addEventListener('mousemove', onDocumentMouseMove, false);
     window.addEventListener('resize', onWindowResize, false);
+
+    //SHADOWS
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 }
 function addObjects() {
     var floorTexture = new THREE.ImageUtils.loadTexture( 'texture/wood_floor.jpg' );
@@ -67,6 +71,11 @@ function addObjects() {
     spotlight.angle = Math.PI/5;
     spotlight.position.set(-1.7, 0.5, -1.1);
     spotlight.intensity = 0.8;
+    spotlight.castShadow = true;
+    spotlight.shadow.mapSize.set(2048, 2048); // higher resolution shadow map
+    spotlight.shadow.bias = -0.0005; // reduce acne
+    spotlight.shadow.camera.near = 0.1;
+    spotlight.shadow.camera.far = 10;
     scene.add(spotlight);
 
     var lightTarget = new THREE.Object3D();
@@ -96,6 +105,10 @@ function addObjects() {
 
     loadGLB(`models/desk_lamp.glb`, -1.85, -0.6, -1, 0.3, 0.3, 0.3, 0, Math.PI/3, 0);
 
+    //SHADOWS
+    plane.receiveShadow = true;
+    base.receiveShadow = true;
+    glassBox.receiveShadow = true;
 
 }
 
@@ -160,13 +173,15 @@ function update() {
             }
             const baseAngle = leg.base.userData.baseAngle;
 
-            const w = t * speed + i + phase;
+            let legSpeed = speed;
+            if (i === 3 || i === 4) {
+                legSpeed = speed * 0.6;
+            }
+            const w = t * legSpeed + i + phase;
 
-            // normálny kruh
             const circleX = Math.cos(w) * sideAmp;
             const circleZ = Math.sin(w) * amplitudeZ;
 
-            // iba zmena smeru otáčania Y pre i > 4
             const dir = (i > 3) ? -1 : 1;
 
             // otočený smer len pre base.rotation.y
@@ -199,10 +214,14 @@ function addSpider(){
     const headMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
     const head = new THREE.Mesh(headGeo, headMat);
     head.position.y = +0.05;
+    head.castShadow = true;
+    head.receiveShadow = false;
     spider.add(head);
 
     const bodyGeo = new THREE.SphereGeometry(0.15, 32, 32);
     const body = new THREE.Mesh(bodyGeo, headMat);
+    body.castShadow = true;
+    body.receiveShadow = false;
 
     const legMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
     spider.legs = [];
@@ -218,6 +237,8 @@ function addSpider(){
         const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
         legGeo.translate(0, 0.1, 0); // pivot na dolnom konci
         const legMesh = new THREE.Mesh(legGeo, legMat);
+        legMesh.castShadow = true;
+        legMesh.receiveShadow = false;
         const legPivot = new THREE.Object3D();
         legPivot.position.set(Math.cos(angle)*0.07, 0, Math.sin(angle)*0.1);
         legPivot.rotation.y = -angle;
@@ -228,6 +249,8 @@ function addSpider(){
         const legGeo2 = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
         legGeo2.translate(0, -0.15, 0);
         const legMesh2 = new THREE.Mesh(legGeo2, legMat);
+        legMesh2.castShadow = true;
+        legMesh2.receiveShadow = false;
         const legPivot2 = new THREE.Object3D();
         legPivot2.position.set(0, 0.2, 0);
         legPivot.add(legPivot2);
@@ -238,7 +261,7 @@ function addSpider(){
 
         // uložíme referencie
         spider.legs.push({
-            base: legBase,   // nový pivot pre kývanie
+            base: legBase,
             upper: legPivot,
             lower: legPivot2,
             upperMesh: legMesh,
@@ -253,6 +276,7 @@ function addSpider(){
 
     spider.position.y = -0.1;
     spider.rotation.y = 0;
+    spider.castShadow = true;
     scene.add(spider);
 }
 // JavaScript
