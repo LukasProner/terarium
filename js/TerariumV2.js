@@ -35,10 +35,16 @@ function init() {
     window.addEventListener('resize', onWindowResize, false);
 }
 function addObjects() {
+    var floorTexture = new THREE.ImageUtils.loadTexture( 'texture/wood_floor.jpg' );
+    floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+    floorTexture.repeat.set( 10, 10 );
+
     var geometryPlane = new THREE.PlaneGeometry( 15, 15, 4, 4 );
     var materialPlane = new THREE.MeshBasicMaterial( {
-        color: 0x747570,
-        side: THREE.DoubleSide} );
+        map: floorTexture,
+        side: THREE.DoubleSide,
+        roughness : 0.12,
+        metalness: 0.35} );
     plane = new THREE.Mesh( geometryPlane, materialPlane );
     plane.position.set(0, -2.5, 0);
     plane.rotation.x = Math.PI / 2;
@@ -83,6 +89,8 @@ function addObjects() {
     spider.position.y = -0.35;
     var ambientLight = new THREE.AmbientLight(0xffffff,0.8);
     scene.add(ambientLight);
+
+    addRoom();
 }
 
 
@@ -289,7 +297,55 @@ function addTable(x, y, z) {
     scene.add(tableGroup);
 }
 
-// Call this from inside addObjects(), e.g. after plane/akvarium creation:
+
+function addRoom() {
+    const room = new THREE.Group();
+    const loader = new THREE.TextureLoader();
+
+    // Try to load textures; if missing, fallback colors will be used
+    const wallTex = loader.load('texture/bricks_wall2.jpg', undefined, undefined, () => {});
+    wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+    wallTex.repeat.set(3, 1.2);
+
+    const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, color: 0xece3d6, side: THREE.DoubleSide });
+    const ceilingMat = new THREE.MeshStandardMaterial({ color: 0xf6f6f4 });
+
+    const wallHeight = 5;
+    const roomSize = 15;
+    // Back wall
+    const wallGeom = new THREE.PlaneGeometry(roomSize, wallHeight);
+    const back = new THREE.Mesh(wallGeom, wallMat);
+    back.position.set(0, -2.5 + wallHeight / 2, -roomSize / 2);
+    room.add(back);
+
+    // Left wall
+    const left = new THREE.Mesh(wallGeom, wallMat);
+    left.position.set(-roomSize / 2, -2.5 + wallHeight / 2, 0);
+    left.rotation.y = Math.PI / 2;
+    room.add(left);
+
+    // Right wall
+    const right = new THREE.Mesh(wallGeom, wallMat);
+    right.position.set(roomSize / 2, -2.5 + wallHeight / 2, 0);
+    right.rotation.y = -Math.PI / 2;
+    room.add(right);
+
+
+    // Ceiling
+    const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(roomSize, roomSize), ceilingMat);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.y = -2.5 + wallHeight;
+    room.add(ceiling);
+
+    scene.add(room);
+
+    loadGLB(
+        "models/bookshelf.glb",
+        -3, -2.4, -7,
+        2, 2, 2
+    );
+}
+
 
 function onDocumentMouseMove(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -300,4 +356,17 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function loadGLB(path, x, y, z, scalex, scaley, scalez) {
+    const loader = new THREE.GLTFLoader();
+
+    loader.load(path, function (gltf) {
+        const model = gltf.scene;
+
+        model.position.set(x, y, z);
+        model.scale.set(scalex, scaley, scalez);
+
+        scene.add(model);
+    });
 }
