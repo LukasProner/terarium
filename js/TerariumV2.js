@@ -11,7 +11,7 @@ render();
 function init() {
     // CAMERA
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 1, 2);
+    camera.position.set(0, 0.5, 3);
 
     // RENDERER
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -38,11 +38,14 @@ function init() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 }
+
+
+
 function addObjects() {
+    //FLOOR
     var floorTexture = new THREE.ImageUtils.loadTexture( 'texture/wood_floor.jpg' );
     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
     floorTexture.repeat.set( 10, 10 );
-
     var geometryPlane = new THREE.PlaneGeometry( 15, 15, 4, 4 );
     var materialPlane = new THREE.MeshBasicMaterial( {
         map: floorTexture,
@@ -50,57 +53,16 @@ function addObjects() {
         roughness : 0.12,
         metalness: 0.35} );
     plane = new THREE.Mesh( geometryPlane, materialPlane );
-    plane.position.set(0, -2.5, 0);
+    plane.position.set(0, -2.5, 4.5);
     plane.rotation.x = Math.PI / 2;
     scene.add( plane );
 
-    // GLASS BOX
-    const glassGeo = new THREE.BoxGeometry(3.01, 1.2, 2.01);
-    const glassMat = new THREE.MeshStandardMaterial({
-        color: 0x88ccff,    // svetlomodrá farba
-        transparent: true,
-        opacity: 0.25,
-        roughness: 0.5,       // hladký povrch = lesk
-        metalness: 0.5,       // sklo nie je kov
-        side: THREE.DoubleSide
-    });
-    glassBox = new THREE.Mesh(glassGeo, glassMat);
-    scene.add(glassBox);
+    addLight();
 
-    var spotlight = new THREE.SpotLight('rgb(248,248,248)');
-    spotlight.angle = Math.PI/5;
-    spotlight.position.set(-1.7, 0.5, -1.1);
-    spotlight.intensity = 0.8;
-    spotlight.castShadow = true;
-    spotlight.shadow.mapSize.set(2048, 2048); // higher resolution shadow map
-    spotlight.shadow.bias = -0.0005; // reduce acne
-    spotlight.shadow.camera.near = 0.1;
-    spotlight.shadow.camera.far = 10;
-    scene.add(spotlight);
-
-    var lightTarget = new THREE.Object3D();
-    lightTarget.position.set(0,-2,0);
-    scene.add(lightTarget);
-    spotlight.target = lightTarget;
-    // var spotLightHelper = new THREE.SpotLightHelper( spotlight );
-    // spotLightHelper.target = lightTarget;
-    // scene.add( spotLightHelper );
-
-
-    // BASE (SAND)
-    var sandTexture = new THREE.ImageUtils.loadTexture('texture/sand.jpg');
-    const baseGeo = new THREE.BoxGeometry(3, 0.1, 2);
-    const baseMat = new THREE.MeshPhongMaterial({ map: sandTexture });
-    base = new THREE.Mesh(baseGeo, baseMat);
-    base.position.y = -0.55;
-    scene.add(base);
     addSpider()
     addTable(0, -0.9, 0);
     spider.scale.set(0.7, 0.7, 0.7);
     spider.position.y = -0.4;
-    var ambientLight = new THREE.AmbientLight(0xffffff,0.8);
-    scene.add(ambientLight);
-
     addRoom();
 
     loadGLB(`models/desk_lamp.glb`, -1.85, -0.6, -1, 0.3, 0.3, 0.3, 0, Math.PI/3, 0);
@@ -123,6 +85,7 @@ function render() {
 
     update();
 }
+
 function update() {
     var delta = clock.getDelta();
     var moveDistance = 1 * delta;
@@ -152,14 +115,29 @@ function update() {
         spider.rotation.y += (angleDiff) * Math.min(1, rotateSpeed * delta);
 
         // Pohyb dopredu podľa lokálneho smeru pavúka
+
+        const oldPosition = spider.position.clone();
+
+// pokus o pohyb
         spider.translateZ(-moveDistance);
+
+// kontrola hraníc
+        if (
+            spider.position.x < -1.3 ||
+            spider.position.x > 1.3 ||
+            spider.position.z < -0.8 ||
+            spider.position.z > 0.8
+        ) {
+            // vráť späť – pavúk narazil na hranicu
+            spider.position.copy(oldPosition);
+        }
     }
 
 
 
     if(moveX !== 0 || moveZ !== 0){
         const t = clock.elapsedTime;
-        const speed =12;
+        const speed =14;
         const amplitudeZ = Math.PI/8;
         const sideAmp = Math.PI/15;
 
@@ -175,7 +153,9 @@ function update() {
 
             let legSpeed = speed;
             if (i === 3 || i === 4) {
-                legSpeed = speed * 0.6;
+                legSpeed = speed * 0.55;
+            }else if(i===2 || i===5){
+                legSpeed = speed * 0.7;
             }
             const w = t * legSpeed + i + phase;
 
@@ -204,6 +184,25 @@ function update() {
 
 
     controls.update();
+}
+
+function addLight() {
+    var ambientLight = new THREE.AmbientLight(0xffffff,0.8);
+    scene.add(ambientLight);
+    var spotlight = new THREE.SpotLight('rgb(248,248,248)');
+    spotlight.angle = Math.PI/5;
+    spotlight.position.set(-1.7, 0.5, -1.1);
+    spotlight.intensity = 0.8;
+    spotlight.castShadow = true;
+    spotlight.shadow.mapSize.set(2048, 2048); // higher resolution shadow map
+    spotlight.shadow.bias = -0.0005; // reduce acne
+    spotlight.shadow.camera.near = 0.1;
+    spotlight.shadow.camera.far = 10;
+    scene.add(spotlight);
+    var lightTarget = new THREE.Object3D();
+    lightTarget.position.set(0,-2,0);
+    scene.add(lightTarget);
+    spotlight.target = lightTarget;
 }
 
 function addSpider(){
@@ -279,8 +278,7 @@ function addSpider(){
     spider.castShadow = true;
     scene.add(spider);
 }
-// JavaScript
-// Add this function to `PG_10C25_Threejs_Vrhanie_tienov_a_hmla/js/ThreeShadows.js`
+
 function addTable(x, y, z) {
     var tableGroup = new THREE.Group();
 
@@ -327,8 +325,26 @@ function addTable(x, y, z) {
     });
 
     scene.add(tableGroup);
-}
 
+    // GLASS BOX
+    const glassGeo = new THREE.BoxGeometry(3.01, 1.2, 2.01);
+    const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x88ccff,    // svetlomodrá farba
+        transparent: true,
+        opacity: 0.25,
+        roughness: 0.5,       // hladký povrch = lesk
+        metalness: 0.5,       // sklo nie je kov
+        side: THREE.DoubleSide
+    });
+    glassBox = new THREE.Mesh(glassGeo, glassMat);
+    scene.add(glassBox);
+    var sandTexture = new THREE.ImageUtils.loadTexture('texture/sand.jpg');
+    const baseGeo = new THREE.BoxGeometry(3, 0.1, 2);
+    const baseMat = new THREE.MeshPhongMaterial({ map: sandTexture });
+    base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.y = -0.55;
+    scene.add(base);
+}
 
 function addRoom() {
     const room = new THREE.Group();
@@ -343,22 +359,22 @@ function addRoom() {
     const ceilingMat = new THREE.MeshStandardMaterial({ color: 0xf6f6f4 });
 
     const wallHeight = 5;
-    const roomSize = 15;
+    const roomSize = 12;
     // Back wall
     const wallGeom = new THREE.PlaneGeometry(roomSize, wallHeight);
     const back = new THREE.Mesh(wallGeom, wallMat);
-    back.position.set(0, -2.5 + wallHeight / 2, -roomSize / 2);
+    back.position.set(0, -2.5 + wallHeight / 2, -roomSize / 2+4.5);
     room.add(back);
 
     // Left wall
     const left = new THREE.Mesh(wallGeom, wallMat);
-    left.position.set(-roomSize / 2, -2.5 + wallHeight / 2, 0);
+    left.position.set(-roomSize / 2, -2.5 + wallHeight / 2, 4.5);
     left.rotation.y = Math.PI / 2;
     room.add(left);
 
     // Right wall
     const right = new THREE.Mesh(wallGeom, wallMat);
-    right.position.set(roomSize / 2, -2.5 + wallHeight / 2, 0);
+    right.position.set(roomSize / 2, -2.5 + wallHeight / 2, 4.5);
     right.rotation.y = -Math.PI / 2;
     room.add(right);
 
@@ -373,16 +389,15 @@ function addRoom() {
 
     loadGLB(
         "models/bookshelf.glb",
-        -5, -2.4, -7,
+        -4.1, -2.4, -1,
         2, 2, 2
     );
     loadGLB(
         "models/storage_cabinet.glb",
-        +5, -2.4, -7,
-        2, 2, 2
+        3.9, -2.4, -1,
+        2.1, 2.1, 2.1
     );
 }
-
 
 function onDocumentMouseMove(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -395,8 +410,6 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// javascript
-// Updated loader that accepts optional rotation (rotX, rotY, rotZ) in radians
 function loadGLB(path, x, y, z, scalex, scaley, scalez, rotX = 0, rotY = 0, rotZ = 0) {
     const loader = new THREE.GLTFLoader();
 
