@@ -11,7 +11,7 @@ render();
 function init() {
     // CAMERA
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(2, 2, 4);
+    camera.position.set(0, 1, 2);
 
     // RENDERER
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -64,16 +64,18 @@ function addObjects() {
     scene.add(glassBox);
 
     var spotlight = new THREE.SpotLight('rgb(248,248,248)');
-    spotlight.angle = Math.PI/6;
-    spotlight.position.set(-2.5, 2, 2);
-    spotlight.intensity = 0.5;
+    spotlight.angle = Math.PI/5;
+    spotlight.position.set(-1.7, 0.5, -1.1);
+    spotlight.intensity = 0.8;
     scene.add(spotlight);
-    var spotLightHelper = new THREE.SpotLightHelper( spotlight );
-    scene.add( spotLightHelper );
+
     var lightTarget = new THREE.Object3D();
-    lightTarget.position.set(0,0,0);
+    lightTarget.position.set(0,-2,0);
     scene.add(lightTarget);
     spotlight.target = lightTarget;
+    // var spotLightHelper = new THREE.SpotLightHelper( spotlight );
+    // spotLightHelper.target = lightTarget;
+    // scene.add( spotLightHelper );
 
 
     // BASE (SAND)
@@ -86,14 +88,16 @@ function addObjects() {
     addSpider()
     addTable(0, -0.9, 0);
     spider.scale.set(0.7, 0.7, 0.7);
-    spider.position.y = -0.35;
+    spider.position.y = -0.4;
     var ambientLight = new THREE.AmbientLight(0xffffff,0.8);
     scene.add(ambientLight);
 
     addRoom();
+
+    loadGLB(`models/desk_lamp.glb`, -1.85, -0.6, -1, 0.3, 0.3, 0.3, 0, Math.PI/3, 0);
+
+
 }
-
-
 
 function render() {
     requestAnimationFrame(render);
@@ -169,9 +173,13 @@ function update() {
             leg.base.rotation.y = baseAngle + circleX * dir;
 
             // hore/dole zostáva rovnaké
-            if(i>1 && i<6){
+            if(i===3 || i===4){
                 leg.upper.rotation.z = -Math.PI/3 + circleZ;
-                leg.lower.rotation.z = Math.PI/3 + circleZ * 0.5;
+                leg.lower.rotation.z = Math.PI/3 + circleZ * 1.5;
+            }
+            else if(i===2 || i===5){
+                leg.upper.rotation.z = -Math.PI/3 + circleZ;
+                leg.lower.rotation.z = Math.PI/3 + circleZ * 0.9;
             }else{
                 leg.upper.rotation.z = -Math.PI/4 + circleZ;
                 leg.lower.rotation.z = Math.PI/3 + circleZ * 0.3;
@@ -341,7 +349,12 @@ function addRoom() {
 
     loadGLB(
         "models/bookshelf.glb",
-        -3, -2.4, -7,
+        -5, -2.4, -7,
+        2, 2, 2
+    );
+    loadGLB(
+        "models/storage_cabinet.glb",
+        +5, -2.4, -7,
         2, 2, 2
     );
 }
@@ -358,7 +371,9 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function loadGLB(path, x, y, z, scalex, scaley, scalez) {
+// javascript
+// Updated loader that accepts optional rotation (rotX, rotY, rotZ) in radians
+function loadGLB(path, x, y, z, scalex, scaley, scalez, rotX = 0, rotY = 0, rotZ = 0) {
     const loader = new THREE.GLTFLoader();
 
     loader.load(path, function (gltf) {
@@ -367,6 +382,35 @@ function loadGLB(path, x, y, z, scalex, scaley, scalez) {
         model.position.set(x, y, z);
         model.scale.set(scalex, scaley, scalez);
 
+        // Apply rotation (radians)
+        model.rotation.set(rotX, rotY, rotZ);
+
         scene.add(model);
+    });
+}
+
+// Example usage: rotate 45 degrees around Y (Math.PI/4)
+
+
+function loadObjWithMTL(objPath, MTLpath, scalex, scaley, scalez,
+                        posX, posY, posZ){
+// ak nie je potrebná globálna premenná tu definujte objekt objcar;
+    var mtlLoader = new THREE.MTLLoader();
+    mtlLoader.load( MTLpath, function( materials ) {
+        materials.preload();
+        var objLoader = new THREE.OBJLoader();
+        objLoader.setMaterials(materials);
+        objLoader.load(objPath, function(object)
+        {
+            objcar = object;
+            objcar.position.set(posX,posY,posZ);
+            objcar.scale.set(scalex,scaley,scalez);
+            // objcar.rotation.y = Math.PI / 2;
+            // objcar.rotation.x = Math.PI / 2;
+            // objcar.rotation.z = Math.PI;
+
+            scene.add( objcar );
+
+        });
     });
 }
