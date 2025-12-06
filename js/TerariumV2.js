@@ -4,7 +4,7 @@ var keyboard = new THREEx.KeyboardState();
 var gameStarted = false;
 var firstMove = false;
 
-var glassBox, base, spider;
+var glassBox, base, spider, jar, lid;
 var projector, mouse = { x: 0, y: 0 }, INTERSECTED;
 
 init();
@@ -12,6 +12,7 @@ render();
 
 function init() {
     console.log("START");
+    startGame();
 
     // CAMERA
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -71,11 +72,18 @@ function addObjects() {
     addRoom();
 
     loadGLB(`models/desk_lamp.glb`, -1.85, -0.6, -1, 0.3, 0.3, 0.3, 0, Math.PI/3, 0);
+    loadGLB(`models/Untitled.glb`, -1.85, -0.6, -1, 0.3, 0.3, 0.3, 0, Math.PI/3, 0);
 
     //SHADOWS
     plane.receiveShadow = true;
     base.receiveShadow = true;
     glassBox.receiveShadow = true;
+
+    // addGlassJar(2, -0.5, 1, 0.5);
+
+    jar = createGlassJar(2, -0.5, 1, 0.5);
+    lid = createJarLid(jar);
+
 
 }
 
@@ -126,10 +134,10 @@ function update() {
 
         const oldPosition = spider.position.clone();
 
-// pokus o pohyb
+        // pokus o pohyb
         spider.translateZ(-moveDistance);
 
-// kontrola hraníc
+        // kontrola hraníc
         if (
             spider.position.x < -1.3 ||
             spider.position.x > 1.3 ||
@@ -191,6 +199,50 @@ function update() {
     }
 
 
+    // var vector = new THREE.Vector3(mouse.x,mouse.y,1);
+    // projector.unprojectVector( vector, camera );
+    // var ray = new THREE.Raycaster( camera.position,
+    //     vector.sub(camera.position ).normalize() );
+    // var intersects = ray.intersectObjects( scene.children );
+    //
+    // if (intersects.length > 0 && intersects[0].object === jar.innerMesh) {
+    //     console.log("Sklenička bola zasiahnutá!");
+    // }
+    // if ( intersects.length > 0 ){
+    //     if( intersects[ 0 ].object != INTERSECTED && intersects[0].object === jar.innerMesh){
+    //         // INTERSECTED = intersects[ 0 ].object;
+    //         // INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+    //         // INTERSECTED.material.color.setHex( 0x00FF00 );
+    //         console.log("Sklenička bola zasiahnutá!");
+    //     }
+    // }
+    //
+
+    var raycaster = new THREE.Raycaster();
+    var mouseVector = new THREE.Vector2();
+
+    mouseVector.set(mouse.x, mouse.y);
+    raycaster.setFromCamera(mouseVector, camera);
+
+    const intersects = raycaster.intersectObjects(jar.group.children, true);
+
+    const hovered = intersects.length > 0;
+
+    if (lid) { // lid is the pivot returned by createJarLid
+        const openTarget = lid.userData.openRotation;
+        const closedTarget = lid.userData.closedRotation;
+        const speed = 6.0; // higher = faster animation
+
+        // choose target based on hover
+        lid.userData.targetRotationX = hovered ? openTarget : closedTarget;
+
+        const diff = lid.userData.targetRotationX - lid.rotation.x;
+        lid.rotation.x += diff * Math.min(1, speed * delta);
+    }
+
+    if (hovered) {
+        console.log("Sklenička bola zasiahnutá!");
+    }
     controls.update();
 }
 
@@ -458,6 +510,114 @@ function loadObjWithMTL(objPath, MTLpath, scalex, scaley, scalez,
 
         });
     });
+}
+
+
+
+// JavaScript
+function createGlassJar(x = 0, y = 0, z = 0, scale = 1) {
+    const texLoader = new THREE.TextureLoader();
+    const envTex = texLoader.load('texture/sky.jpg');
+    envTex.encoding = THREE.sRGBEncoding;
+    envTex.mapping = THREE.EquirectangularReflectionMapping;
+
+    const height = 1.0 * scale;
+    const outerRadius = 0.4 * scale;
+    const thickness = 0.03 * scale;
+    const radialSegments = 64;
+
+    const jarGroup = new THREE.Group();
+
+    const outerGeo = new THREE.CylinderGeometry(outerRadius, outerRadius, height, radialSegments, 1, true);
+    const innerGeo = new THREE.CylinderGeometry(outerRadius - thickness, outerRadius - thickness, height - 0.02 * scale, radialSegments, 1, true);
+
+    const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        metalness: 0.0,
+        roughness: 0.05,
+        transmission: 0.9,
+        transparent: true,
+        opacity: 0.25,
+        ior: 1.45,
+        thickness: thickness,
+        envMap: envTex,
+        side: THREE.FrontSide,
+        depthWrite: false
+    });
+
+    const innerMat = glassMat.clone();
+    innerMat.side = THREE.BackSide;
+
+    const outerMesh = new THREE.Mesh(outerGeo, glassMat);
+    const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+
+    outerMesh.position.y = height / 2 - 0.01 * scale;
+    innerMesh.position.copy(outerMesh.position);
+
+    const bottomGeo = new THREE.CircleGeometry(outerRadius, 32);
+    const bottomMat = new THREE.MeshStandardMaterial({
+        color: 0xcccccc,
+        metalness: 1,
+        roughness: 0.4
+    });
+
+    const bottomMesh = new THREE.Mesh(bottomGeo, bottomMat);
+    bottomMesh.rotation.x = -Math.PI / 2;
+
+    jarGroup.add(bottomMesh);
+    jarGroup.add(innerMesh);
+    jarGroup.add(outerMesh);
+
+    jarGroup.position.set(x, y, z);
+
+    // Raycast bude fungovať čisto pre jarGroup.children
+    jarGroup.children.forEach(m => m.userData.isJar = true);
+
+    scene.add(jarGroup);
+
+    return { group: jarGroup, outerMesh, innerMesh, bottomMesh };
+}
+
+function createJarLid(jarObj) {
+    const outerMesh = jarObj.outerMesh;
+    const height = outerMesh.geometry.parameters.height;
+    const outerRadius = outerMesh.geometry.parameters.radiusTop;
+    const scale = 1;
+
+    const lidHeight = 0.05;
+    const lidGeo = new THREE.CylinderGeometry(outerRadius, outerRadius, lidHeight, 32);
+
+    const lidMat = new THREE.MeshStandardMaterial({
+        color: 0x050505,
+        metalness: 0.5,
+        roughness: 0.15
+    });
+
+    const lidMesh = new THREE.Mesh(lidGeo, lidMat);
+    lidMesh.castShadow = true;
+    lidMesh.receiveShadow = true;
+
+    // Pivot placed at the rim plane (where the lid meets the jar)
+    const lidPivot = new THREE.Object3D();
+    lidPivot.position.copy(outerMesh.position);
+    lidPivot.position.y += (height / 2);
+
+    lidMesh.position.set(0, lidHeight / 2, 0);
+
+    // Add lid to pivot. Rotating the pivot will tilt the lid.
+    lidPivot.add(lidMesh);
+
+    // Mark the actual mesh so raycaster still hits it
+    lidMesh.userData.isJar = true;
+
+    // Animation targets on the pivot (rotate around X to tilt backward)
+    lidPivot.userData.closedRotation = 0;
+    lidPivot.userData.openRotation = -Math.PI / 4; // tilt ~45 deg backward
+    lidPivot.userData.targetRotationX = 0;
+
+    // Add to jar group
+    jarObj.group.add(lidPivot);
+    return lidPivot;
 }
 
 
