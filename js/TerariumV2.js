@@ -199,45 +199,28 @@ function update() {
     }
 
 
-    // var vector = new THREE.Vector3(mouse.x,mouse.y,1);
-    // projector.unprojectVector( vector, camera );
-    // var ray = new THREE.Raycaster( camera.position,
-    //     vector.sub(camera.position ).normalize() );
-    // var intersects = ray.intersectObjects( scene.children );
-    //
-    // if (intersects.length > 0 && intersects[0].object === jar.innerMesh) {
-    //     console.log("Sklenička bola zasiahnutá!");
-    // }
-    // if ( intersects.length > 0 ){
-    //     if( intersects[ 0 ].object != INTERSECTED && intersects[0].object === jar.innerMesh){
-    //         // INTERSECTED = intersects[ 0 ].object;
-    //         // INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
-    //         // INTERSECTED.material.color.setHex( 0x00FF00 );
-    //         console.log("Sklenička bola zasiahnutá!");
-    //     }
-    // }
-    //
-
     var raycaster = new THREE.Raycaster();
-    var mouseVector = new THREE.Vector2();
+    var mouseVector = new THREE.Vector3(mouse.x,mouse.y,1);
 
-    mouseVector.set(mouse.x, mouse.y);
-    raycaster.setFromCamera(mouseVector, camera);
+    // mouseVector.set(mouse.x, mouse.y,1);
+    raycaster.setFromCamera(mouseVector, camera); // web vraciach chybu ked som isiel podla 7 cvicenia vraj je toto novsie riesenie
 
     const intersects = raycaster.intersectObjects(jar.group.children, true);
 
     const hovered = intersects.length > 0;
 
-    if (lid) { // lid is the pivot returned by createJarLid
+    if (lid) {
         const openTarget = lid.userData.openRotation;
         const closedTarget = lid.userData.closedRotation;
-        const speed = 6.0; // higher = faster animation
+        const speed = 6.0;
 
         // choose target based on hover
         lid.userData.targetRotationX = hovered ? openTarget : closedTarget;
 
         const diff = lid.userData.targetRotationX - lid.rotation.x;
         lid.rotation.x += diff * Math.min(1, speed * delta);
+        lid.position.y -= diff * Math.min(1, speed * delta) *0.3;
+        jar.group.position.y -= diff * Math.min(1, speed * delta) *0.1;
     }
 
     if (hovered) {
@@ -250,7 +233,7 @@ function addLight() {
     var ambientLight = new THREE.AmbientLight(0xffffff,0.8);
     scene.add(ambientLight);
     var spotlight = new THREE.SpotLight('rgb(248,248,248)');
-    spotlight.angle = Math.PI/5;
+    spotlight.angle = Math.PI/4;
     spotlight.position.set(-1.7, 0.5, -1.1);
     spotlight.intensity = 0.8;
     spotlight.castShadow = true;
@@ -392,7 +375,7 @@ function addTable(x, y, z) {
         color: 0x88ccff,    // svetlomodrá farba
         transparent: true,
         opacity: 0.25,
-        roughness: 0.5,       // hladký povrch = lesk
+        roughness: 1,       // hladký povrch = lesk
         metalness: 0.5,       // sklo nie je kov
         side: THREE.DoubleSide
     });
@@ -523,7 +506,7 @@ function createGlassJar(x = 0, y = 0, z = 0, scale = 1) {
 
     const height = 1.0 * scale;
     const outerRadius = 0.4 * scale;
-    const thickness = 0.03 * scale;
+    const thickness = 0.01 * scale;
     const radialSegments = 64;
 
     const jarGroup = new THREE.Group();
@@ -531,22 +514,19 @@ function createGlassJar(x = 0, y = 0, z = 0, scale = 1) {
     const outerGeo = new THREE.CylinderGeometry(outerRadius, outerRadius, height, radialSegments, 1, true);
     const innerGeo = new THREE.CylinderGeometry(outerRadius - thickness, outerRadius - thickness, height - 0.02 * scale, radialSegments, 1, true);
 
-    const glassMat = new THREE.MeshPhysicalMaterial({
+    const glassMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
-        metalness: 0.0,
-        roughness: 0.05,
-        transmission: 0.9,
+        metalness: 1,          // trochu kovové odlesky, aby to pôsobilo lesklejšie
+        roughness: 0.05,         // nízka drsnosť = hladké sklo
         transparent: true,
-        opacity: 0.25,
-        ior: 1.45,
-        thickness: thickness,
-        envMap: envTex,
-        side: THREE.FrontSide,
-        depthWrite: false
+        opacity: 0.2,           // jemná priehľadnosť
+        envMap: envTex,          // odrazy z environmentu
+        envMapIntensity: 1.2,    // zosilnené odrazy
+        side: THREE.doubleSided,
+        depthWrite: false        // OCHRANA pred glitchmi pri transparentných materiáloch
     });
 
     const innerMat = glassMat.clone();
-    innerMat.side = THREE.BackSide;
 
     const outerMesh = new THREE.Mesh(outerGeo, glassMat);
     const innerMesh = new THREE.Mesh(innerGeo, innerMat);
@@ -563,6 +543,9 @@ function createGlassJar(x = 0, y = 0, z = 0, scale = 1) {
 
     const bottomMesh = new THREE.Mesh(bottomGeo, bottomMat);
     bottomMesh.rotation.x = -Math.PI / 2;
+    outerMesh.renderOrder = 2;
+    innerMesh.renderOrder = 1;
+    bottomMesh.renderOrder = 0;
 
     jarGroup.add(bottomMesh);
     jarGroup.add(innerMesh);
@@ -573,6 +556,8 @@ function createGlassJar(x = 0, y = 0, z = 0, scale = 1) {
     // Raycast bude fungovať čisto pre jarGroup.children
     jarGroup.children.forEach(m => m.userData.isJar = true);
 
+    outerMesh.material.side = THREE.DoubleSide;
+    innerMesh.material.side = THREE.DoubleSide;
     scene.add(jarGroup);
 
     return { group: jarGroup, outerMesh, innerMesh, bottomMesh };
@@ -582,7 +567,6 @@ function createJarLid(jarObj) {
     const outerMesh = jarObj.outerMesh;
     const height = outerMesh.geometry.parameters.height;
     const outerRadius = outerMesh.geometry.parameters.radiusTop;
-    const scale = 1;
 
     const lidHeight = 0.05;
     const lidGeo = new THREE.CylinderGeometry(outerRadius, outerRadius, lidHeight, 32);
@@ -603,7 +587,8 @@ function createJarLid(jarObj) {
     lidPivot.position.y += (height / 2);
 
     lidMesh.position.set(0, lidHeight / 2, 0);
-
+    lidMesh.renderOrder = 3;
+    lidMesh.material.depthWrite = true;
     // Add lid to pivot. Rotating the pivot will tilt the lid.
     lidPivot.add(lidMesh);
 

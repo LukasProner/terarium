@@ -1,1 +1,3 @@
 Pridat nejak rozoznavanie rychlosti pocitaca na vykreslovanie ci pouzit standard alebo labmert alebo Phong.
+pridat dvojite sklo pre terarium
+popracovat na materialoch a odrazoch
