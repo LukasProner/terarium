@@ -7,6 +7,14 @@ var firstMove = false;
 var glassBox, base, spider, jar, lid;
 var projector, mouse = { x: 0, y: 0 }, INTERSECTED;
 
+
+// --- Worm creation + pick/drag logic ---
+// Add these globals near other globals or paste at top of file
+var selectedWorm = null;
+var dragPlane = new THREE.Plane();
+var dragOffset = new THREE.Vector3();
+var originalParent = null;
+
 init();
 render();
 
@@ -43,6 +51,9 @@ function init() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+    document.addEventListener('pointerdown', onPointerDown, false);
+    document.addEventListener('pointermove', onPointerMove, false);
+    document.addEventListener('pointerup', onPointerUp, false);
 }
 
 
@@ -84,7 +95,7 @@ function addObjects() {
     jar = createGlassJar(2, -0.5, 1, 0.5);
     lid = createJarLid(jar);
 
-
+    createWormsInJar(jar, 6);
 }
 
 function render() {
@@ -604,6 +615,149 @@ function createJarLid(jarObj) {
     jarObj.group.add(lidPivot);
     return lidPivot;
 }
+
+
+
+
+
+
+// Call this after `jar = createGlassJar(...)` in addObjects()
+function createWormsInJar(jarObj, count = 6) {
+    const worms = [];
+    const outerRadius = jarObj.outerMesh.geometry.parameters.radiusTop || 0.4;
+    const height = jarObj.outerMesh.geometry.parameters.height || 1.0;
+
+    for (let i = 0; i < count; i++) {
+        const worm = new THREE.Group();
+        const segments = 6;
+        const segRadius = 0.03;
+        const mat = new THREE.MeshStandardMaterial({ color: 0x8b3e2f, roughness: 0.8 });
+        // simple segmented worm made of small spheres
+        for (let s = 0; s < segments; s++) {
+            const g = new THREE.SphereGeometry(segRadius, 8, 8);
+            const m = new THREE.Mesh(g, mat);
+            m.position.x = (s - segments/2) * segRadius * 1.1;
+            m.castShadow = true;
+            m.receiveShadow = false;
+            worm.add(m);
+        }
+        // random placement inside jar interior (local coordinates around jar.group position)
+        const r = (outerRadius - 0.06) * Math.random();
+        const theta = Math.random() * Math.PI * 2;
+        const localX = r * Math.cos(theta);
+        const localZ = r * Math.sin(theta);
+        const localY = (Math.random() * (height * 0.5)) - (height * 0.25); // roughly inside
+        worm.position.set(localX, localY, localZ);
+        worm.userData = { type: 'worm' };
+        // mark meshes individually too (raycaster may hit child mesh)
+        worm.traverse(c => { if (c.isMesh) c.userData = c.userData || {}; c.userData.type = 'worm'; });
+
+        jarObj.group.add(worm);
+        worms.push(worm);
+    }
+    return worms;
+}
+
+
+
+
+
+// javascript
+function onPointerDown(event) {
+    // onDocumentMouseMove(event);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(mouse, camera);
+    const intersects = ray.intersectObjects(scene.children, true);
+    const hit = intersects.find(i => i.object && i.object.userData && i.object.userData.type === 'worm');
+    if (hit) {
+        // start from hit object and climb up to the top-most ancestor that still has userData.type === 'worm'
+        let parent = hit.object;
+        while (parent.parent && parent.parent.userData && parent.parent.userData.type === 'worm') {
+            parent = parent.parent;
+        }
+        selectedWorm = parent;
+
+        // remember original parent
+        originalParent = selectedWorm.parent;
+
+        // preserve world position before re-parenting to scene
+        const worldPos = new THREE.Vector3();
+        selectedWorm.getWorldPosition(worldPos);
+
+        // move the whole worm group to scene root so dragging uses world coords
+        scene.add(selectedWorm);
+        selectedWorm.position.copy(worldPos);
+
+        // setup drag plane horizontal at hit point
+        const hitPoint = hit.point.clone();
+        dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 4), hitPoint);
+
+        // compute offset from hit point to object position
+        // dragOffset.copy(selectedWorm.position).sub(hitPoint);
+
+        // disable orbit while dragging
+        if (controls) controls.enabled = false;
+    }
+}
+
+
+function onPointerMove(event) {
+    // onDocumentMouseMove(event);
+    if (!selectedWorm) return;
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(mouse, camera);
+    const intersectionPoint = new THREE.Vector3();
+    if (ray.ray.intersectPlane(dragPlane, intersectionPoint)) {
+        // apply offset and keep slight lift
+        selectedWorm.position.copy(intersectionPoint).add(dragOffset);
+        selectedWorm.position.y = Math.max(selectedWorm.position.y, intersectionPoint.y + 0.01);
+    }
+}
+
+function onPointerUp(event) {
+    // onDocumentMouseMove(event);
+    if (!selectedWorm) return;
+    // decide whether to return to jar or leave in scene (thrown out)
+    const jarPos = jar.group.position.clone();
+    const jarRadius = jar.outerMesh.geometry.parameters.radiusTop || 0.4;
+    const dist = selectedWorm.position.clone().sub(jarPos).length();
+
+    if (dist <= jarRadius - 0.05) {
+        // put back into jar (convert world position to jar local)
+        originalParent.add(selectedWorm);
+        // compute local position relative to jar.group
+        selectedWorm.position.copy(selectedWorm.parent.worldToLocal(selectedWorm.getWorldPosition(new THREE.Vector3())));
+    } else {
+        // left outside jar - leave in scene at current position
+        // Optionally check terrarium bounds to mark as placed in terrarium
+        const inTerrarium = (
+            selectedWorm.position.x > -1.3 &&
+            selectedWorm.position.x < 1.3 &&
+            selectedWorm.position.z > -0.8 &&
+            selectedWorm.position.z < 0.8
+        );
+        if (inTerrarium) {
+            // simple effect: slightly drop onto table/floor
+            selectedWorm.position.y = Math.max(selectedWorm.position.y, -0.4);
+            selectedWorm.userData.placedInTerrarium = true;
+        }
+    }
+
+    selectedWorm = null;
+    originalParent = null;
+    if (controls) controls.enabled = true;
+}
+
+// Small helper: add worms right after jar is created in addObjects()
+// Find the place in addObjects() where jar is created and add this call:
+//    jar = createGlassJar(2, -0.5, 1, 0.5);
+//    lid = createJarLid(jar);
+//    createWormsInJar(jar, 6);
+
+
+
+
+
 
 
 
